@@ -1,0 +1,336 @@
+import React, { useState } from "react";
+import { base44 } from "@/api/base44Client";
+import { motion } from "framer-motion";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { MapPin, Phone, Mail, Send, CheckCircle, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+
+export default function Contact() {
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    message: ""
+  });
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSending(true);
+
+    try {
+      // Send email to both addresses
+      await Promise.all([
+        base44.integrations.Core.SendEmail({
+          to: "zencrypt69@gmail.com",
+          subject: `Contact Form Submission from Jaipuria Blogs - ${formData.name}`,
+          body: `
+📧 New Contact Form Submission from Jaipuria Blogs
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+👤 Contact Details:
+   Name: ${formData.name}
+   Email: ${formData.email}
+   Phone: ${formData.phone || 'Not provided'}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💬 Message:
+${formData.message}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Submitted on: ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
+
+---
+This message was sent from the Jaipuria Blogs contact form.
+          `
+        }),
+        base44.integrations.Core.SendEmail({
+          to: "alt.f4workablesolutions@gmail.com",
+          subject: `Contact Form Submission from Jaipuria Blogs - ${formData.name}`,
+          body: `
+📧 New Contact Form Submission from Jaipuria Blogs
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+👤 Contact Details:
+   Name: ${formData.name}
+   Email: ${formData.email}
+   Phone: ${formData.phone || 'Not provided'}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💬 Message:
+${formData.message}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Submitted on: ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
+
+---
+This message was sent from the Jaipuria Blogs contact form.
+          `
+        })
+      ]);
+
+      // Send confirmation email to the user
+      await base44.integrations.Core.SendEmail({
+        to: formData.email,
+        subject: "Thank you for contacting Jaipuria Blogs! 🎉",
+        body: `
+Dear ${formData.name},
+
+Thank you for reaching out to Jaipuria Blogs! 🌟
+
+We have received your message and our team will get back to you as soon as possible.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Your message:
+${formData.message}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+In the meantime, feel free to explore our community stories and blog posts at Jaipuria Blogs.
+
+Best regards,
+Jaipuria Blogs Team
+
+---
+Jaipuria School, Lucknow
+"Conscious Transformation - From Ignorance to Knowledge"
+        `
+      });
+
+      setSent(true);
+      toast.success("🎉 Message sent successfully! Check your email for confirmation.");
+      setFormData({ name: "", email: "", phone: "", message: "" });
+
+      setTimeout(() => setSent(false), 5000);
+    } catch (error) {
+      toast.error("❌ Failed to send message. Please try again or email us directly.");
+      console.error("Error sending contact form:", error);
+    }
+
+    setSending(false);
+  };
+
+  return (
+    <div className="min-h-screen py-16">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-12"
+        >
+          <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-purple-600 via-orange-600 to-pink-600 bg-clip-text text-transparent">
+            Get in Touch
+          </h1>
+          <p className="text-xl text-gray-600">
+            We'd love to hear from you. Reach out to us anytime! 📧
+          </p>
+        </motion.div>
+
+        <div className="grid md:grid-cols-2 gap-8">
+          {/* Contact Form */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <Card className="shadow-2xl border-none">
+              <CardHeader>
+                <CardTitle className="text-2xl bg-gradient-to-r from-orange-600 to-pink-600 bg-clip-text text-transparent">
+                  Send us a Message
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {sent && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg"
+                  >
+                    <div className="flex items-center gap-2 text-green-800">
+                      <CheckCircle className="w-5 h-5" />
+                      <p className="font-medium">Message sent successfully!</p>
+                    </div>
+                    <p className="text-sm text-green-700 mt-1">
+                      We've sent you a confirmation email. We'll get back to you soon! 📧
+                    </p>
+                  </motion.div>
+                )}
+
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div>
+                    <Label htmlFor="name">Full Name *</Label>
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => setFormData({...formData, name: e.target.value})}
+                      required
+                      className="mt-1"
+                      placeholder="Your name"
+                      disabled={sending}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="email">Email Address *</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({...formData, email: e.target.value})}
+                      required
+                      className="mt-1"
+                      placeholder="your.email@example.com"
+                      disabled={sending}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="phone">Phone Number</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                      className="mt-1"
+                      placeholder="+91 XXXXX XXXXX"
+                      disabled={sending}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="message">Message *</Label>
+                    <Textarea
+                      id="message"
+                      value={formData.message}
+                      onChange={(e) => setFormData({...formData, message: e.target.value})}
+                      required
+                      className="mt-1 min-h-32"
+                      placeholder="Tell us what you'd like to know..."
+                      disabled={sending}
+                    />
+                  </div>
+
+                  <Button
+                    type="submit"
+                    disabled={sending || sent}
+                    className="w-full bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white"
+                  >
+                    {sending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Sending Message...
+                      </>
+                    ) : sent ? (
+                      <>
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        Message Sent!
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4 mr-2" />
+                        Send Message
+                      </>
+                    )}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Contact Information */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.4 }}
+            className="space-y-6"
+          >
+            <Card className="shadow-xl border-none">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-pink-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <MapPin className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-lg mb-2">Our Location</h3>
+                    <p className="text-gray-600">
+                      Jaipuria School<br />
+                      Lucknow, Uttar Pradesh<br />
+                      India
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-xl border-none">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-pink-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Mail className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-lg mb-2">Email Us</h3>
+                    <p className="text-gray-600">
+                      <a href="mailto:zencrypt69@gmail.com" className="hover:text-orange-600 transition-colors">
+                        zencrypt69@gmail.com
+                      </a>
+                      <br />
+                      <a href="mailto:alt.f4workablesolutions@gmail.com" className="hover:text-orange-600 transition-colors">
+                        alt.f4workablesolutions@gmail.com
+                      </a>
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-xl border-none">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-pink-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Phone className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-lg mb-2">Call Us</h3>
+                    <p className="text-gray-600">
+                      Office: +91 (522) XXX-XXXX<br />
+                      Admissions: +91 (522) XXX-YYYY
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Map */}
+            <Card className="shadow-xl border-none overflow-hidden">
+              <div className="aspect-video bg-gradient-to-br from-purple-200 via-orange-200 to-pink-200 flex items-center justify-center">
+                <div className="text-center p-8">
+                  <MapPin className="w-16 h-16 text-orange-600 mx-auto mb-4" />
+                  <p className="text-gray-700 font-medium">
+                    Jaipuria School, Lucknow
+                  </p>
+                  <p className="text-sm text-gray-500 mt-2">
+                    Map integration available
+                  </p>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+        </div>
+      </div>
+    </div>
+  );
+}
