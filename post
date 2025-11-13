@@ -1,0 +1,55 @@
+{
+  "name": "Post",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Title of the blog post"
+    },
+    "content": {
+      "type": "string",
+      "description": "Main content of the post"
+    },
+    "excerpt": {
+      "type": "string",
+      "description": "Short excerpt for previews"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "School Life",
+        "Events",
+        "Experience",
+        "Stories",
+        "Other"
+      ],
+      "default": "Other",
+      "description": "Post category"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Tags for the post"
+    },
+    "image_url": {
+      "type": "string",
+      "description": "Featured image URL"
+    },
+    "video_url": {
+      "type": "string",
+      "description": "Featured video URL"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected"
+      ],
+      "default": "pending",
+      "description": "Approval status"
+    },
+    "rejection_reason": {
+      "type": "string",
