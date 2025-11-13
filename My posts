@@ -1,0 +1,217 @@
+import React, { useState, useEffect } from "react";
+import { base44 } from "@/api/base44Client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Link, useNavigate } from "react-router-dom";
+import { createPageUrl } from "@/utils";
+import { motion } from "framer-motion";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Eye, Heart, Edit, Trash2, Clock, CheckCircle, XCircle, Loader2, MessageCircle } from "lucide-react";
+import { format } from "date-fns";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
+export default function MyPosts() {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [deletePostId, setDeletePostId] = useState(null);
+
+  useEffect(() => {
+    loadUser();
+  }, []);
+
+  const loadUser = async () => {
+    try {
+      const userData = await base44.auth.me();
+      setUser(userData);
+      setLoading(false);
+    } catch (error) {
+      base44.auth.redirectToLogin(createPageUrl("MyPosts"));
+    }
+  };
+
+  const { data: myPosts = [], isLoading: postsLoading } = useQuery({
+    queryKey: ['my-posts', user?.email],
+    queryFn: () => base44.entities.Post.filter({ author_email: user.email }, '-created_date'),
+    enabled: !!user,
+  });
+
+  const { data: allComments = [] } = useQuery({
+    queryKey: ['all-comments'],
+    queryFn: () => base44.entities.Comment.list(),
+    enabled: !!user,
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (postId) => base44.entities.Post.delete(postId),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['my-posts']);
+      toast.success("Post deleted successfully");
+      setDeletePostId(null);
+    },
+  });
+
+  const getCommentCount = (postId) => {
+    return allComments.filter(c => c.post_id === postId).length;
+  };
+
+  const getTotalViews = () => {
+    return myPosts.reduce((sum, post) => sum + (post.views || 0), 0);
+  };
+
+  const getTotalLikes = () => {
+    return myPosts.reduce((sum, post) => sum + (post.likes || 0), 0);
+  };
+
+  const getTotalComments = () => {
+    return myPosts.reduce((sum, post) => sum + getCommentCount(post.id), 0);
+  };
+
+  const filteredPosts = myPosts.filter(post => {
+    if (statusFilter === "all") return true;
+    return post.status === statusFilter;
+  });
+
+  const getStatusBadge = (status) => {
+    if (status === "approved") {
+      return <Badge className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" /> Approved</Badge>;
+    }
+    if (status === "pending") {
+      return <Badge className="bg-yellow-100 text-yellow-800"><Clock className="w-3 h-3 mr-1" /> Pending</Badge>;
+    }
+    return <Badge className="bg-red-100 text-red-800"><XCircle className="w-3 h-3 mr-1" /> Rejected</Badge>;
+  };
+
+  if (loading || postsLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-12 h-12 animate-spin text-orange-600" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen py-16">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-orange-600 to-pink-600 bg-clip-text text-transparent">
+            📝 My Posts
+          </h1>
+          <p className="text-xl text-gray-600">
+            Manage your blog posts and submissions
+          </p>
+        </motion.div>
+
+        {/* Enhanced Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+          <Card className="shadow-md border-none">
+            <CardContent className="p-4 text-center">
+              <div className="text-3xl font-bold text-gray-900">{myPosts.length}</div>
+              <div className="text-sm text-gray-600">Total Posts</div>
+            </CardContent>
+          </Card>
+          <Card className="shadow-md border-none">
+            <CardContent className="p-4 text-center">
+              <div className="text-3xl font-bold text-green-600">
+                {myPosts.filter(p => p.status === "approved").length}
+              </div>
+              <div className="text-sm text-gray-600">Approved</div>
+            </CardContent>
+          </Card>
+          <Card className="shadow-md border-none">
+            <CardContent className="p-4 text-center">
+              <div className="text-3xl font-bold text-blue-600">
+                {getTotalViews()}
+              </div>
+              <div className="text-sm text-gray-600 flex items-center justify-center gap-1">
+                <Eye className="w-3 h-3" /> Total Views
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="shadow-md border-none">
+            <CardContent className="p-4 text-center">
+              <div className="text-3xl font-bold text-red-600">
+                {getTotalLikes()}
+              </div>
+              <div className="text-sm text-gray-600 flex items-center justify-center gap-1">
+                <Heart className="w-3 h-3" /> Total Likes
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="shadow-md border-none">
+            <CardContent className="p-4 text-center">
+              <div className="text-3xl font-bold text-purple-600">
+                {getTotalComments()}
+              </div>
+              <div className="text-sm text-gray-600 flex items-center justify-center gap-1">
+                <MessageCircle className="w-3 h-3" /> Comments
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Filter Tabs */}
+        <div className="mb-8">
+          <Tabs value={statusFilter} onValueChange={setStatusFilter}>
+            <TabsList className="bg-white shadow-md">
+              <TabsTrigger value="all">All Posts</TabsTrigger>
+              <TabsTrigger value="approved">Approved</TabsTrigger>
+              <TabsTrigger value="pending">Pending</TabsTrigger>
+              <TabsTrigger value="rejected">Rejected</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+
+        {/* Posts List */}
+        {filteredPosts.length === 0 ? (
+          <Card className="shadow-xl border-none">
+            <CardContent className="p-12 text-center">
+              <div className="text-6xl mb-4">📝</div>
+              <h3 className="text-2xl font-semibold text-gray-700 mb-2">No posts yet</h3>
+              <p className="text-gray-500 mb-6">Start sharing your story with the community 🌟</p>
+              <Link to={createPageUrl("Write")}>
+                <Button className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white">
+                  Write Your First Post
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-4">
+            {filteredPosts.map((post) => (
+              <motion.div
+                key={post.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <Card className="shadow-md border-none hover:shadow-xl transition-all">
+                  <CardContent className="p-6">
+                    <div className="flex flex-col md:flex-row gap-6">
+                      {post.image_url && (
+                        <div className="md:w-48 h-32 bg-gradient-to-br from-orange-200 to-pink-200 rounded-lg overflow-hidden flex-shrink-0">
+                          <img 
+                            src={post.image_url} 
+                            alt={post.title}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+ 
