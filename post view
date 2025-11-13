@@ -1,0 +1,55 @@
+// ... keep existing code (imports) ...
+
+export default function PostView() {
+  // ... keep existing code (all state and functions until return statement) ...
+
+  return (
+    <div className="min-h-screen py-8 md:py-16">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <Button
+          variant="ghost"
+          onClick={() => navigate(createPageUrl("Forum"))}
+          className="mb-6"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back to Forum
+        </Button>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <Card className="overflow-hidden shadow-2xl border-none mb-8">
+            {post.video_url ? (
+              <div className="aspect-video bg-black">
+                <video 
+                  src={post.video_url} 
+                  controls
+                  className="w-full h-full object-contain"
+                >
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+            ) : post.image_url ? (
+              <div className="aspect-video bg-gradient-to-br from-orange-200 to-pink-200">
+                <img 
+                  src={post.image_url} 
+                  alt={post.title}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            ) : null}
+            
+            <CardContent className="p-8 md:p-12">
+              {/* ... keep existing code (rest of the post display) */}
+            </CardContent>
+          </Card>
+
+          {/* ... keep existing code (Comments Section) */}
+        </motion.div>
+      </div>
+    </div>
+  );
+}
+
+// ... keep existing code (CommentThread component) ...
