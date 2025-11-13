@@ -1,0 +1,217 @@
+import React, { useState } from "react";
+import { base44 } from "@/api/base44Client";
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
+import { createPageUrl } from "@/utils";
+import { motion } from "framer-motion";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Eye, Heart, MessageCircle, Search, TrendingUp, Clock } from "lucide-react";
+import { format } from "date-fns";
+
+export default function Forum() {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [sortBy, setSortBy] = useState("recent");
+
+  const { data: posts = [], isLoading } = useQuery({
+    queryKey: ['forum-posts'],
+    queryFn: () => base44.entities.Post.filter({ status: 'approved' }, '-created_date'),
+  });
+
+  const { data: allComments = [] } = useQuery({
+    queryKey: ['all-comments'],
+    queryFn: () => base44.entities.Comment.list(),
+  });
+
+  const getCommentCount = (postId) => {
+    return allComments.filter(c => c.post_id === postId).length;
+  };
+
+  const filteredPosts = posts
+    .filter(post => {
+      const matchesSearch = post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          post.content.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = selectedCategory === "all" || post.category === selectedCategory;
+      return matchesSearch && matchesCategory;
+    })
+    .sort((a, b) => {
+      if (sortBy === "popular") return (b.likes || 0) - (a.likes || 0);
+      if (sortBy === "views") return (b.views || 0) - (a.views || 0);
+      return new Date(b.created_date) - new Date(a.created_date);
+    });
+
+  const categories = ["all", "School Life", "Events", "Experience", "Stories", "Other"];
+
+  return (
+    <div className="min-h-screen py-16">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-12"
+        >
+          <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-purple-600 via-orange-600 to-pink-600 bg-clip-text text-transparent">
+            Community Forum 📚
+          </h1>
+          <p className="text-xl text-gray-600 mb-8">
+            Explore stories, discussions, and insights from our community
+          </p>
+
+          {/* Search Bar */}
+          <div className="max-w-2xl mx-auto">
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search posts... 🔍"
+                className="pl-12 py-6 text-lg shadow-lg"
+              />
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Filters */}
+        <div className="mb-8 flex flex-col md:flex-row gap-4 items-center justify-between">
+          <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="w-full md:w-auto">
+            <TabsList className="bg-white shadow-md flex-wrap h-auto">
+              {categories.map(cat => (
+                <TabsTrigger key={cat} value={cat} className="capitalize">
+                  {cat === "all" ? "All 🌟" : cat}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+
+          <div className="flex gap-2">
+            <Button
+              variant={sortBy === "recent" ? "default" : "outline"}
+              onClick={() => setSortBy("recent")}
+              size="sm"
+              className={sortBy === "recent" ? "bg-gradient-to-r from-orange-500 to-pink-500" : ""}
+            >
+              <Clock className="w-4 h-4 mr-2" />
+              Recent
+            </Button>
+            <Button
+              variant={sortBy === "popular" ? "default" : "outline"}
+              onClick={() => setSortBy("popular")}
+              size="sm"
+              className={sortBy === "popular" ? "bg-gradient-to-r from-orange-500 to-pink-500" : ""}
+            >
+              <TrendingUp className="w-4 h-4 mr-2" />
+              Popular
+            </Button>
+          </div>
+        </div>
+
+        {/* Posts Grid */}
+        {isLoading ? (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="animate-pulse">
+                <div className="bg-gray-200 h-48 rounded-t-2xl"></div>
+                <div className="p-6 bg-white rounded-b-2xl">
+                  <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                  <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filteredPosts.length === 0 ? (
+          <div className="text-center py-16">
+            <div className="text-6xl mb-4">🔍</div>
+            <h3 className="text-2xl font-semibold text-gray-700 mb-2">No posts found</h3>
+            <p className="text-gray-500">Try adjusting your search or filters</p>
+          </div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
+          >
+            {filteredPosts.map((post) => (
+              <motion.div
+                key={post.id}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                whileHover={{ scale: 1.02 }}
+                transition={{ duration: 0.2 }}
+              >
+                <Link to={createPageUrl(`PostView?id=${post.id}`)}>
+                  <Card className="overflow-hidden hover:shadow-2xl transition-all duration-300 h-full border-none">
+                    <div className="aspect-video bg-gradient-to-br from-purple-200 via-orange-200 to-pink-200 relative overflow-hidden">
+                      {post.image_url ? (
+                        <img 
+                          src={post.image_url} 
+                          alt={post.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-6xl">
+                          {post.category === "Events" ? "🎉" : 
+                           post.category === "Experience" ? "💡" : 
+                           post.category === "Stories" ? "📖" : 
+                           post.category === "School Life" ? "🎒" : "📝"}
+                        </div>
+                      )}
+                      <div className="absolute top-3 right-3">
+                        <Badge className="bg-white/90 text-orange-600 hover:bg-white">
+                          {post.category}
+                        </Badge>
+                      </div>
+                    </div>
+                    <CardContent className="p-6">
+                      <h3 className="text-xl font-bold mb-2 text-gray-900 line-clamp-2 hover:text-orange-600 transition-colors">
+                        {post.title}
+                      </h3>
+                      <p className="text-gray-600 text-sm mb-4 line-clamp-3">
+                        {post.excerpt || post.content?.substring(0, 120) + "..."}
+                      </p>
+                      
+                      <div className="flex items-center gap-2 mb-4 text-xs text-gray-500">
+                        <span className="font-medium">{post.author_name}</span>
+                        <span>•</span>
+                        <span>{format(new Date(post.created_date), "MMM d, yyyy")}</span>
+                      </div>
+
+                      {post.tags && post.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mb-4">
+                          {post.tags.slice(0, 3).map((tag, idx) => (
+                            <Badge key={idx} variant="outline" className="text-xs">
+                              #{tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-between text-sm text-gray-500 pt-4 border-t">
+                        <span className="flex items-center gap-1">
+                          <Eye className="w-4 h-4" />
+                          {post.views || 0}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Heart className="w-4 h-4" />
+                          {post.likes || 0}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <MessageCircle className="w-4 h-4" />
+                          {getCommentCount(post.id)}
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
+      </div>
+    </div>
+  );
+}
