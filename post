@@ -53,3 +53,68 @@
     },
     "rejection_reason": {
       "type": "string",
+      "description": "Reason for rejection if applicable"
+    },
+    "author_name": {
+      "type": "string",
+      "description": "Name of the author"
+    },
+    "author_email": {
+      "type": "string",
+      "description": "Email of the author"
+    },
+    "views": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of views"
+    },
+    "likes": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of likes"
+    },
+    "liked_by": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "User emails who liked this post"
+    }
+  },
+  "required": [
+    "title",
+    "content",
+    "author_email"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {},
+    "update": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "email": "alt.f4workablesolutions@gmail.com"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "email": "alt.f4workablesolutions@gmail.com"
+          }
+        }
+      ]
+    }
+  }
+}
