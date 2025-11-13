@@ -1,0 +1,336 @@
+import React, { useState, useEffect } from "react";
+import { base44 } from "@/api/base44Client";
+import { useNavigate } from "react-router-dom";
+import { createPageUrl } from "@/utils";
+import { motion } from "framer-motion";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Send, Upload, Loader2, Image as ImageIcon, Video } from "lucide-react";
+import { toast } from "sonner";
+
+export default function Write() {
+  const navigate = useNavigate();
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
+  const [videoUploading, setVideoUploading] = useState(false);
+  
+  const [formData, setFormData] = useState({
+    title: "",
+    content: "",
+    excerpt: "",
+    category: "Other",
+    tags: "",
+    image_url: "",
+    video_url: ""
+  });
+
+  useEffect(() => {
+    loadUser();
+  }, []);
+
+  const loadUser = async () => {
+    try {
+      const userData = await base44.auth.me();
+      
+      // Check if user is blocked
+      if (userData.is_blocked) {
+        toast.error("Your account has been suspended from posting. Please contact the administrator.");
+        window.location.href = createPageUrl("Home");
+        return;
+      }
+      
+      // Check if user is timed out
+      if (userData.timeout_until) {
+        const timeoutDate = new Date(userData.timeout_until);
+        const now = new Date();
+        
+        if (timeoutDate > now) {
+          const daysLeft = Math.ceil((timeoutDate - now) / (1000 * 60 * 60 * 24));
+          toast.error(`Your account is temporarily suspended until ${timeoutDate.toLocaleDateString()}. (${daysLeft} days remaining)`);
+          window.location.href = createPageUrl("Home");
+          return;
+        }
+      }
+      
+      setUser(userData);
+      setLoading(false);
+    } catch (error) {
+      base44.auth.redirectToLogin(createPageUrl("Write"));
+    }
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Check file size (limit to 200MB)
+    const maxSize = 200 * 1024 * 1024; // 200MB in bytes
+    if (file.size > maxSize) {
+      toast.error("Image file is too large. Maximum size is 200MB.");
+      return;
+    }
+
+    setImageUploading(true);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      setFormData({ ...formData, image_url: file_url });
+      toast.success("Image uploaded successfully! 📷");
+    } catch (error) {
+      toast.error("Failed to upload image");
+    }
+    setImageUploading(false);
+  };
+
+  const handleVideoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Check file size (limit to 200MB)
+    const maxSize = 200 * 1024 * 1024; // 200MB in bytes
+    if (file.size > maxSize) {
+      toast.error("Video file is too large. Maximum size is 200MB.");
+      return;
+    }
+
+    setVideoUploading(true);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      setFormData({ ...formData, video_url: file_url });
+      toast.success("Video uploaded successfully! 🎥");
+    } catch (error) {
+      toast.error("Failed to upload video");
+    }
+    setVideoUploading(false);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+
+    try {
+      const tagsArray = formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+      
+      await base44.entities.Post.create({
+        ...formData,
+        tags: tagsArray,
+        author_name: user.full_name,
+        author_email: user.email,
+        status: "pending"
+      });
+
+      // Notify moderator
+      await base44.integrations.Core.SendEmail({
+        to: "alt.f4workablesolutions@gmail.com",
+        subject: `New Post Pending Approval: ${formData.title}`,
+        body: `
+A new post has been submitted and requires your approval.
+
+Title: ${formData.title}
+Author: ${user.full_name} (${user.email})
+Category: ${formData.category}
+Has Image: ${formData.image_url ? 'Yes' : 'No'}
+Has Video: ${formData.video_url ? 'Yes' : 'No'}
+
+Please log in to the moderation dashboard to review and approve/reject this post.
+        `
+      });
+
+      toast.success("Post submitted successfully! Awaiting moderator approval. 🎉");
+      navigate(createPageUrl("MyPosts"));
+    } catch (error) {
+      toast.error("Failed to submit post. Please try again.");
+    }
+
+    setSubmitting(false);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-orange-600" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen py-16">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-purple-600 via-orange-600 to-pink-600 bg-clip-text text-transparent">
+            ✍️ Share Your Story
+          </h1>
+          <p className="text-xl text-gray-600">
+            Your post will be reviewed by our moderator before publishing
+          </p>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <Card className="shadow-2xl border-none">
+            <CardHeader>
+              <CardTitle className="text-2xl">Create New Post 📝</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div>
+                  <Label htmlFor="title">Post Title *</Label>
+                  <Input
+                    id="title"
+                    value={formData.title}
+                    onChange={(e) => setFormData({...formData, title: e.target.value})}
+                    required
+                    className="mt-1"
+                    placeholder="Give your post a catchy title... ✨"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="excerpt">Short Excerpt</Label>
+                  <Input
+                    id="excerpt"
+                    value={formData.excerpt}
+                    onChange={(e) => setFormData({...formData, excerpt: e.target.value})}
+                    className="mt-1"
+                    placeholder="A brief summary of your post (optional)"
+                  />
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div>
+                    <Label htmlFor="category">Category *</Label>
+                    <Select
+                      value={formData.category}
+                      onValueChange={(value) => setFormData({...formData, category: value})}
+                    >
+                      <SelectTrigger className="mt-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="School Life">🎒 School Life</SelectItem>
+                        <SelectItem value="Events">🎉 Events</SelectItem>
+                        <SelectItem value="Experience">💡 Experience</SelectItem>
+                        <SelectItem value="Stories">📖 Stories</SelectItem>
+                        <SelectItem value="Other">📝 Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="tags">Tags (comma-separated)</Label>
+                    <Input
+                      id="tags"
+                      value={formData.tags}
+                      onChange={(e) => setFormData({...formData, tags: e.target.value})}
+                      className="mt-1"
+                      placeholder="sports, academic, cultural"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="content">Your Story *</Label>
+                  <Textarea
+                    id="content"
+                    value={formData.content}
+                    onChange={(e) => setFormData({...formData, content: e.target.value})}
+                    required
+                    className="mt-1 min-h-64"
+                    placeholder="Share your story, experience, or thoughts... 💭"
+                  />
+                </div>
+
+                {/* Media Upload Section */}
+                <div>
+                  <Label>Featured Media</Label>
+                  <Tabs defaultValue="image" className="mt-2">
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="image" className="flex items-center gap-2">
+                        <ImageIcon className="w-4 h-4" />
+                        Image
+                      </TabsTrigger>
+                      <TabsTrigger value="video" className="flex items-center gap-2">
+                        <Video className="w-4 h-4" />
+                        Video
+                      </TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="image" className="mt-4">
+                      {formData.image_url ? (
+                        <div className="relative">
+                          <img 
+                            src={formData.image_url} 
+                            alt="Preview"
+                            className="w-full h-64 object-cover rounded-lg"
+                          />
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            className="absolute top-2 right-2"
+                            onClick={() => setFormData({...formData, image_url: ""})}
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      ) : (
+                        <label className="border-2 border-dashed border-gray-300 rounded-lg p-8 flex flex-col items-center justify-center cursor-pointer hover:border-orange-500 transition-colors">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageUpload}
+                            className="hidden"
+                            disabled={imageUploading}
+                          />
+                          {imageUploading ? (
+                            <Loader2 className="w-12 h-12 text-orange-600 animate-spin mb-4" />
+                          ) : (
+                            <ImageIcon className="w-12 h-12 text-gray-400 mb-4" />
+                          )}
+                          <p className="text-gray-600 text-center">
+                            {imageUploading ? "Uploading..." : "Click to upload an image"}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-2">
+                            JPG, PNG, GIF up to 200MB
+                          </p>
+                        </label>
+                      )}
+                    </TabsContent>
+
+                    <TabsContent value="video" className="mt-4">
+                      {formData.video_url ? (
+                        <div className="relative">
+                          <video 
+                            src={formData.video_url} 
+                            controls
+                            className="w-full h-64 object-cover rounded-lg bg-black"
+                          >
+                            Your browser does not support the video tag.
+                          </video>
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            className="absolute top-2 right-2"
+                            onClick={() => setFormData({...formData, video_url: ""})}
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      ) : (
+                        <label className="border-2 border-dashed border-gray-300 rounded-lg p-8 flex flex-col items-center justify-center cursor-pointer hover:border-orange-500 transition-colors">
+                          <input
+ 
