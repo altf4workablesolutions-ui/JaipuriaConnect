@@ -333,4 +333,68 @@ Please log in to the moderation dashboard to review and approve/reject this post
                       ) : (
                         <label className="border-2 border-dashed border-gray-300 rounded-lg p-8 flex flex-col items-center justify-center cursor-pointer hover:border-orange-500 transition-colors">
                           <input
- 
+                            type="file"
+                            accept="video/*"
+                            onChange={handleVideoUpload}
+                            className="hidden"
+                            disabled={videoUploading}
+                          />
+                          {videoUploading ? (
+                            <>
+                              <Loader2 className="w-12 h-12 text-orange-600 animate-spin mb-4" />
+                              <p className="text-orange-600 text-center font-medium">
+                                Uploading video... This may take a moment
+                              </p>
+                            </>
+                          ) : (
+                            <>
+                              <Video className="w-12 h-12 text-gray-400 mb-4" />
+                              <p className="text-gray-600 text-center">
+                                Click to upload a video
+                              </p>
+                              <p className="text-xs text-gray-500 mt-2">
+                                MP4, MOV, AVI up to 200MB
+                              </p>
+                            </>
+                          )}
+                        </label>
+                      )}
+                    </TabsContent>
+                  </Tabs>
+                </div>
+
+                <div className="flex gap-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => navigate(createPageUrl("Forum"))}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={submitting || imageUploading || videoUploading}
+                    className="flex-1 bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white"
+                  >
+                    {submitting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Submitting...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4 mr-2" />
+                        Submit for Approval
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+    </div>
+  );
+}
